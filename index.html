@@ -1,28 +1,472 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>Memory Pathology</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>병리사진 학습</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+        }
+
+        .correct-circle { background: #4CAF50; }
+        .incorrect-circle { background: #f44336; }
+
+        .main-container {
+            margin-top: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .image-container {
+            position: relative;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 90vw;
+            max-height: 60vh;
+            overflow: hidden;
+        }
+
+        .pathology-image {
+            max-width: 100%;
+            max-height: 60vh;
+            width: auto;
+            height: auto;
+            border-radius: 15px;
+            display: block;
+        }
+
+        .loading {
+            width: 300px;
+            height: 200px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .category-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 30px;
+        }
+
+        .answer-button {
+            width: 80px;
+            height: 80px;
+            border: none;
+            border-radius: 50%;
+            font-size: 36px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .answer-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .answer-button:active {
+            transform: translateY(-2px);
+        }
+
+        .correct-button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .incorrect-button {
+            background: linear-gradient(135deg, #f44336, #da190b);
+        }
+
+        .feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            border-radius: 15px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .feedback.show {
+            opacity: 1;
+        }
+
+        .feedback.correct {
+            background: #4CAF50;
+        }
+
+        .feedback.incorrect {
+            background: #f44336;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .answer-button {
+                width: 60px;
+                height: 60px;
+                font-size: 28px;
+            }
+            
+            .button-container {
+                gap: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>🧠 Memory Pathology</h1>
+    <div class="header">
+        <div class="title">병리사진 학습</div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-circle correct-circle">O</div>
+                <span>정답: <span id="correctCount">0</span></span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-circle incorrect-circle">X</div>
+                <span>오답: <span id="incorrectCount">0</span></span>
+            </div>
+            <div class="stat-item">
+                <span>총 문제: <span id="totalCount">0</span></span>
+            </div>
+            <div class="stat-item">
+                <span>정답률: <span id="accuracy">0</span>%</span>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
 
-  <label for="folderSelect">Choose folder:</label>
-  <select id="folderSelect">
-    <option value="BO_SO">BO_SO</option>
-    <option value="Breast">Breast</option>
-    <option value="Endo">Endo</option>
-    <option value="GI">GI</option>
-    <option value="GU_prostate">GU_prostate</option>
-    <option value="GU_RCC">GU_RCC</option>
-    <option value="GU_UCC">GU_UCC</option>
-  </select>
+    <div class="main-container">
+        <div class="image-container">
+            <div class="loading" id="loadingDiv">이미지 로딩 중...</div>
+            <img class="pathology-image" id="pathologyImage" style="display: none;">
+            <div class="category-label" id="categoryLabel" style="display: none;"></div>
+        </div>
 
-  <button onclick="loadRandomImage()">Show Random Image</button>
+        <div class="button-container">
+            <button class="answer-button correct-button" onclick="handleAnswer(true)">
+                O
+            </button>
+            <button class="answer-button incorrect-button" onclick="handleAnswer(false)">
+                X
+            </button>
+        </div>
+    </div>
 
-  <div id="imageContainer"></div>
+    <div class="feedback" id="feedback"></div>
 
-  <script src="script.js"></script>
+    <script>
+        // Cloudinary 설정 - 여기에 본인의 클라우드 이름을 입력하세요
+        const CLOUDINARY_CLOUD_NAME = 'db5wqzdth';
+        
+        // 카테고리 설정
+        const CATEGORIES = [
+            'BO_SO',
+            'Breast', 
+            'Endo',
+            'GI',
+            'GU_prostate',
+            'GU_RCC',
+            'GU_UCC'
+        ];
+
+        // 게임 상태
+        let gameState = {
+            correctCount: 0,
+            incorrectCount: 0,
+            totalCount: 0,
+            currentImageInfo: null,
+            imagePool: [],
+            usedImages: new Set()
+        };
+
+        // Cloudinary에서 이미지 목록 가져오기
+        async function fetchImagesFromCloudinary() {
+            try {
+                const allImages = [];
+                
+                for (const category of CATEGORIES) {
+                    // Cloudinary의 리소스 목록 API 호출
+                    const response = await fetch(
+                        `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/list/${category}.json`
+                    );
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const categoryImages = data.resources.map(resource => ({
+                            public_id: resource.public_id,
+                            category: category,
+                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${resource.public_id}`
+                        }));
+                        allImages.push(...categoryImages);
+                    } else {
+                        console.warn(`Failed to fetch images for category: ${category}`);
+                        // 카테고리별로 임의의 이미지 생성 (테스트용)
+                        for (let i = 1; i <= 50; i++) {
+                            allImages.push({
+                                public_id: `${category}/${category}_${i}`,
+                                category: category,
+                                url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${category}_${i}.jpg`
+                            });
+                        }
+                    }
+                }
+                
+                return allImages;
+            } catch (error) {
+                console.error('Error fetching images:', error);
+                // 에러 발생 시 테스트 데이터 반환
+                const testImages = [];
+                for (const category of CATEGORIES) {
+                    for (let i = 1; i <= 50; i++) {
+                        testImages.push({
+                            public_id: `${category}/${category}_${i}`,
+                            category: category,
+                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${category}_${i}.jpg`
+                        });
+                    }
+                }
+                return testImages;
+            }
+        }
+
+        // 게임 초기화
+        async function initializeGame() {
+            showLoading();
+            try {
+                gameState.imagePool = await fetchImagesFromCloudinary();
+                console.log(`Loaded ${gameState.imagePool.length} images`);
+                loadNextImage();
+            } catch (error) {
+                console.error('Failed to initialize game:', error);
+                document.getElementById('loadingDiv').textContent = '이미지 로딩 실패. 페이지를 새로고침해주세요.';
+            }
+        }
+
+        // 로딩 표시
+        function showLoading() {
+            document.getElementById('loadingDiv').style.display = 'flex';
+            document.getElementById('pathologyImage').style.display = 'none';
+            document.getElementById('categoryLabel').style.display = 'none';
+        }
+
+        // 다음 이미지 로드
+        function loadNextImage() {
+            if (gameState.imagePool.length === 0) {
+                document.getElementById('loadingDiv').textContent = '이미지를 찾을 수 없습니다.';
+                return;
+            }
+
+            // 모든 이미지를 한 번씩 본 경우 리셋
+            if (gameState.usedImages.size >= gameState.imagePool.length) {
+                gameState.usedImages.clear();
+            }
+
+            // 사용하지 않은 이미지 중 랜덤 선택
+            let availableImages = gameState.imagePool.filter(img => 
+                !gameState.usedImages.has(img.public_id)
+            );
+            
+            if (availableImages.length === 0) {
+                availableImages = gameState.imagePool;
+                gameState.usedImages.clear();
+            }
+
+            const randomImage = availableImages[Math.floor(Math.random() * availableImages.length)];
+            gameState.currentImageInfo = randomImage;
+            gameState.usedImages.add(randomImage.public_id);
+
+            // 이미지 로드
+            const img = document.getElementById('pathologyImage');
+            img.onload = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                img.style.display = 'block';
+                document.getElementById('categoryLabel').textContent = randomImage.category;
+                document.getElementById('categoryLabel').style.display = 'block';
+            };
+            
+            img.onerror = function() {
+                console.warn('Failed to load image:', randomImage.url);
+                loadNextImage(); // 다른 이미지 시도
+            };
+            
+            img.src = randomImage.url;
+        }
+
+        // 답변 처리
+        function handleAnswer(isCorrect) {
+            gameState.totalCount++;
+            
+            if (isCorrect) {
+                gameState.correctCount++;
+                showFeedback('정답!', true);
+            } else {
+                gameState.incorrectCount++;
+                showFeedback('오답!', false);
+            }
+            
+            updateStats();
+            
+            // 1초 후 다음 이미지 로드
+            setTimeout(() => {
+                showLoading();
+                setTimeout(loadNextImage, 500);
+            }, 1000);
+        }
+
+        // 피드백 표시
+        function showFeedback(message, isCorrect) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = message;
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'} show`;
+            
+            setTimeout(() => {
+                feedback.classList.remove('show');
+            }, 800);
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('correctCount').textContent = gameState.correctCount;
+            document.getElementById('incorrectCount').textContent = gameState.incorrectCount;
+            document.getElementById('totalCount').textContent = gameState.totalCount;
+            
+            const accuracy = gameState.totalCount > 0 
+                ? Math.round((gameState.correctCount / gameState.totalCount) * 100)
+                : 0;
+            document.getElementById('accuracy').textContent = accuracy;
+            
+            // 진행률 업데이트 (총 이미지 수 대비)
+            const progress = gameState.imagePool.length > 0
+                ? (gameState.usedImages.size / gameState.imagePool.length) * 100
+                : 0;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'ArrowLeft' || event.key === 'o' || event.key === 'O') {
+                handleAnswer(true);
+            } else if (event.code === 'ArrowRight' || event.key === 'x' || event.key === 'X') {
+                handleAnswer(false);
+            }
+        });
+
+        // 게임 시작
+        initializeGame();
+    </script>
 </body>
 </html>
