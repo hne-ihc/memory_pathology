@@ -363,8 +363,64 @@
         let imageStats = JSON.parse(localStorage.getItem('imageStats') || '{}');
 
         // 이미지 URL 생성 함수
-        function getImageUrl(folder, imageNumber, suffix) {
-            return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${folder}/${folder}_1_${imageNumber}_${suffix}.jpg`;
+        function getImageUrl(imageName) {
+            return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${imageName}.jpg`;
+        }
+        
+        // 이미지 존재 여부 확인 함수
+        async function checkImageExists(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(false);
+                img.src = url;
+            });
+        }
+
+        // 자동으로 이미지 목록 생성 (패턴 기반으로 존재하는 이미지 찾기)
+        async function autoDiscoverImages(folderName) {
+            const images = [];
+            const maxImages = 20; // 한 번에 체크할 최대 이미지 수
+            let foundCount = 0;
+            
+            // 일반적인 suffix 패턴들
+            const commonSuffixes = [
+                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+                'wiaute', 'vck5wg', 'u6htti', 'kq4iy8', 'lxlxaf', 'xpils9', 'btqi9d', 'i6rfwf', 'unbktw', 'db80cr',
+                'khqouy', 'grezaz', 'rgl0to', 'y5hkcs', 'zf3u6k', 'czd3pw', 'lvfjtd', 'cd12xq', 'mfakk4', 'sizcjt',
+                'b4wrpa', 'p0zhzz', 'wsfwf2', 'iirlza', 'j6djon', 'psnyst', 'test', 'img', 'pic', 'sample'
+            ];
+            
+            console.log(`🔍 ${folderName} 폴더에서 이미지 검색 중...`);
+            
+            // 1_1부터 1_99까지, 2_1부터 2_99까지 체크
+            for (let prefix = 1; prefix <= 3 && foundCount < maxImages; prefix++) {
+                for (let num = 1; num <= 99 && foundCount < maxImages; num++) {
+                    // 몇 개의 일반적인 suffix만 빠르게 체크
+                    const testSuffixes = commonSuffixes.slice(0, 5);
+                    
+                    for (let suffix of testSuffixes) {
+                        const imageName = `${folderName}_${prefix}_${num}_${suffix}`;
+                        const imageUrl = getImageUrl(imageName);
+                        
+                        // 비동기로 이미지 존재 확인
+                        const exists = await checkImageExists(imageUrl);
+                        if (exists) {
+                            images.push({
+                                name: imageName,
+                                url: imageUrl,
+                                folder: folderName
+                            });
+                            foundCount++;
+                            console.log(`✅ 발견: ${imageName}`);
+                            break; // 해당 번호에서 이미지를 찾으면 다음 번호로
+                        }
+                    }
+                }
+            }
+            
+            console.log(`📊 ${folderName}: ${images.length}개 이미지 발견`);
+            return images;
         }
 
         // 이미지 존재 확인 및 랜덤 이미지 생성
@@ -386,16 +442,24 @@
 
         // 특정 폴더에서 이미지 수집
         async function getImagesFromFolder(folderName) {
-            let images = [];
-            // 테스트용 placeholder 이미지 (실제 사용시에는 실제 파일명으로 교체)
-            for (let i = 1; i <= 5; i++) {
-                const imageName = `${folderName}_1_${i}_test`;
-                images.push({
-                    name: imageName,
-                    url: `https://picsum.photos/400/600?random=${folderName}_${i}`, // 테스트용 placeholder
-                    folder: folderName
-                });
+            // 캐시에서 먼저 확인
+            const cacheKey = `images_${folderName}`;
+            const cached = localStorage.getItem(cacheKey);
+            const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+            
+            // 캐시가 있고 1시간 이내라면 캐시 사용
+            if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 3600000) {
+                console.log(`📱 ${folderName} 캐시에서 로드`);
+                return JSON.parse(cached);
             }
+            
+            // 자동 탐지로 이미지 목록 생성
+            const images = await autoDiscoverImages(folderName);
+            
+            // 캐시에 저장
+            localStorage.setItem(cacheKey, JSON.stringify(images));
+            localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+            
             return images;
         }
 
@@ -414,16 +478,20 @@
             let filtered = [];
             for (let imageName in answers) {
                 if (answers[imageName] === answerType) {
-                    // 이미지 정보 재구성
-                    const parts = imageName.split('_');
-                    if (parts.length >= 4) {
-                        const folder = parts.slice(0, -3).join('_');
-                        filtered.push({
-                            name: imageName,
-                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${folder}/${imageName}.jpg`,
-                            folder: folder
-                        });
+                    // 폴더명 추출
+                    let folder = '';
+                    for (let folderName of FOLDERS) {
+                        if (imageName.startsWith(folderName)) {
+                            folder = folderName;
+                            break;
+                        }
                     }
+                    
+                    filtered.push({
+                        name: imageName,
+                        url: getImageUrl(imageName),
+                        folder: folder
+                    });
                 }
             }
             return shuffleArray(filtered);
@@ -451,6 +519,10 @@
         async function startMode(folder) {
             selectedFolder = folder;
             
+            // 로딩 표시
+            document.getElementById('quizTitle').textContent = '이미지 로딩 중...';
+            showScreen('quizScreen');
+            
             if (currentMode === 'quiz') {
                 currentImageList = await generateImageList(folder);
                 document.getElementById('quizTitle').textContent = 
@@ -468,13 +540,13 @@
             
             if (currentImageList.length === 0) {
                 alert('해당 조건에 맞는 이미지가 없습니다.');
+                showFolderSelection();
                 return;
             }
             
             currentImageIndex = 0;
             imageHistory = [0];
             showCurrentImage();
-            showScreen('quizScreen');
         }
 
         // 현재 이미지 표시
@@ -501,7 +573,8 @@
             // 이미지 로드 에러 처리
             img.onerror = function() {
                 console.log('Image failed to load:', currentImage.url);
-                nextImage(); // 다음 이미지로 자동 이동
+                // 실제 이미지가 없으면 다음 이미지로 이동
+                nextImage();
             };
         }
 
