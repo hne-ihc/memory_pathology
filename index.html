@@ -207,6 +207,20 @@
             transition: width 0.3s ease;
         }
 
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 300px;
+            word-break: break-all;
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .stats {
                 flex-wrap: wrap;
@@ -267,10 +281,11 @@
     </div>
 
     <div class="feedback" id="feedback"></div>
+    <div class="debug-info" id="debugInfo"></div>
 
     <script>
-        // Cloudinary 설정 - 여기에 본인의 클라우드 이름을 입력하세요
-        const CLOUDINARY_CLOUD_NAME = 'db5wqzdth'; // 실제 클라우드 이름으로 변경
+        // Cloudinary 설정
+        const CLOUDINARY_CLOUD_NAME = 'db5wqzdth';
         
         // 카테고리 설정
         const CATEGORIES = [
@@ -290,49 +305,98 @@
             totalCount: 0,
             currentImageInfo: null,
             imagePool: [],
-            usedImages: new Set()
+            usedImages: new Set(),
+            currentAttempts: 0
         };
 
-        // 이미지 목록 생성 (파일명 기반)
+        // 랜덤 문자열 생성 함수 (실제 이미지에서 사용되는 패턴 추정)
+        function generateRandomStrings() {
+            const patterns = [
+                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+                'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                'ab', 'cd', 'ef', 'gh', 'ij', 'kl', 'mn', 'op', 'qr', 'st',
+                '1a', '2b', '3c', '4d', '5e', 
+                'x1', 'y2', 'z3', 'w4', 'v5',
+                '', // 랜덤문자열이 없는 경우도 고려
+                '_new', '_old', '_test', '_final'
+            ];
+            return patterns;
+        }
+
+        // 이미지 목록 생성 (새로운 네이밍 규칙에 맞게)
         function generateImageList() {
             const allImages = [];
+            const randomStrings = generateRandomStrings();
             
             // 각 카테고리별로 이미지 추가
             for (const category of CATEGORIES) {
-                // 각 카테고리당 50장씩 (1부터 50까지)
+                // 첫 번째 숫자: 1~99
+                for (let firstNum = 1; firstNum <= 99; firstNum++) {
+                    // 두 번째 숫자: 1~99
+                    for (let secondNum = 1; secondNum <= 99; secondNum++) {
+                        // 여러 랜덤 문자열 패턴 시도
+                        for (const randomStr of randomStrings) {
+                            const filename = `${category}_${firstNum}_${secondNum}${randomStr}`;
+                            
+                            // 다양한 파일 확장자 시도
+                            const extensions = ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG'];
+                            
+                            for (const ext of extensions) {
+                                allImages.push({
+                                    public_id: `${category}/${filename}`,
+                                    category: category,
+                                    filename: `${filename}.${ext}`,
+                                    url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${category}/${filename}.${ext}`,
+                                    fallback_url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${filename}.${ext}`,
+                                    firstNum: firstNum,
+                                    secondNum: secondNum,
+                                    randomStr: randomStr
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // 간단한 패턴도 추가 (Category_1_1.jpg 같은)
                 for (let i = 1; i <= 50; i++) {
-                    const imageNumber = i.toString().padStart(3, '0'); // 001, 002, 003 형식
-                    
-                    // 다양한 파일 확장자 시도
-                    const extensions = ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG'];
-                    
-                    for (const ext of extensions) {
+                    for (let j = 1; j <= 20; j++) {
+                        const filename = `${category}_${i}_${j}`;
                         allImages.push({
-                            public_id: `${category}/${category}_${imageNumber}`,
+                            public_id: `${category}/${filename}`,
                             category: category,
-                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${category}/${category}_${imageNumber}.${ext}`,
-                            fallback_url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${category}_${i}.${ext}`
+                            filename: `${filename}.jpg`,
+                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${category}/${filename}.jpg`,
+                            fallback_url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${filename}.jpg`,
+                            firstNum: i,
+                            secondNum: j,
+                            randomStr: ''
                         });
                     }
-                    
-                    // 숫자만 있는 경우도 추가
-                    allImages.push({
-                        public_id: `${category}/${i}`,
-                        category: category,
-                        url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${category}/${i}.jpg`,
-                        fallback_url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${i}.jpg`
-                    });
                 }
             }
             
-            return allImages;
+            // 배열을 셔플해서 랜덤하게 시도
+            return shuffleArray(allImages);
+        }
+
+        // 배열 셔플 함수
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
         }
 
         // 게임 초기화
         async function initializeGame() {
             showLoading();
-            gameState.imagePool = await generateImageList();
-            console.log(`실제 발견된 이미지: ${gameState.imagePool.length}개`);
+            gameState.imagePool = generateImageList();
+            console.log(`생성된 이미지 URL 패턴: ${gameState.imagePool.length}개`);
+            
+            // 실제로 존재하는 이미지들을 찾기 시작
+            await findValidImages();
             
             if (gameState.imagePool.length === 0) {
                 document.getElementById('loadingDiv').textContent = '이미지를 찾을 수 없습니다. Cloudinary 설정을 확인하세요.';
@@ -340,6 +404,58 @@
             }
             
             loadNextImage();
+        }
+
+        // 유효한 이미지들을 찾는 함수
+        async function findValidImages() {
+            const validImages = [];
+            let checkedCount = 0;
+            const maxCheck = Math.min(500, gameState.imagePool.length); // 최대 500개까지만 확인
+            
+            document.getElementById('loadingDiv').textContent = '이미지 검색 중...';
+            
+            for (let i = 0; i < maxCheck; i++) {
+                const imageInfo = gameState.imagePool[i];
+                
+                try {
+                    const isValid = await checkImageExists(imageInfo.url);
+                    if (isValid) {
+                        validImages.push(imageInfo);
+                        console.log(`유효한 이미지 발견: ${imageInfo.filename}`);
+                    }
+                } catch (error) {
+                    // 이미지가 없는 경우는 무시
+                }
+                
+                checkedCount++;
+                
+                // 진행 상황 표시
+                if (checkedCount % 50 === 0) {
+                    document.getElementById('loadingDiv').textContent = 
+                        `이미지 검색 중... (${checkedCount}/${maxCheck}) - 발견: ${validImages.length}개`;
+                }
+                
+                // 충분한 이미지를 찾으면 중단
+                if (validImages.length >= 50) {
+                    break;
+                }
+            }
+            
+            gameState.imagePool = validImages;
+            console.log(`최종 유효한 이미지: ${gameState.imagePool.length}개`);
+        }
+
+        // 이미지 존재 여부 확인
+        function checkImageExists(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(false);
+                img.src = url;
+                
+                // 5초 타임아웃
+                setTimeout(() => resolve(false), 5000);
+            });
         }
 
         // 로딩 표시
@@ -352,7 +468,7 @@
         // 다음 이미지 로드
         function loadNextImage() {
             if (gameState.imagePool.length === 0) {
-                document.getElementById('loadingDiv').textContent = '이미지를 찾을 수 없습니다.';
+                document.getElementById('loadingDiv').textContent = '사용 가능한 이미지가 없습니다.';
                 return;
             }
 
@@ -385,6 +501,9 @@
                     img.style.display = 'block';
                     document.getElementById('categoryLabel').textContent = imageInfo.category;
                     document.getElementById('categoryLabel').style.display = 'block';
+                    
+                    // 디버그 정보 표시
+                    updateDebugInfo(`현재 이미지: ${imageInfo.filename}`);
                 };
                 
                 img.onerror = function() {
@@ -405,6 +524,13 @@
             }
             
             tryLoadImage(randomImage);
+        }
+
+        // 디버그 정보 업데이트
+        function updateDebugInfo(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.textContent = message;
+            // 디버그 정보는 기본적으로 숨김 (필요시 CSS에서 display: block으로 변경)
         }
 
         // 답변 처리
@@ -463,6 +589,10 @@
                 handleAnswer(true);
             } else if (event.code === 'ArrowRight' || event.key === 'x' || event.key === 'X') {
                 handleAnswer(false);
+            } else if (event.key === 'd' || event.key === 'D') {
+                // 디버그 정보 토글
+                const debugDiv = document.getElementById('debugInfo');
+                debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
             }
         });
 
