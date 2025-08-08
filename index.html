@@ -227,7 +227,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="title">병리사진 학습</div>
+        <div class="title">뿌셔뿌셔</div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-circle correct-circle">O</div>
@@ -270,7 +270,7 @@
 
     <script>
         // Cloudinary 설정 - 여기에 본인의 클라우드 이름을 입력하세요
-        const CLOUDINARY_CLOUD_NAME = 'db5wqzdth';
+        const CLOUDINARY_CLOUD_NAME = 'your-cloud-name'; // 실제 클라우드 이름으로 변경
         
         // 카테고리 설정
         const CATEGORIES = [
@@ -293,67 +293,53 @@
             usedImages: new Set()
         };
 
-        // Cloudinary에서 이미지 목록 가져오기
-        async function fetchImagesFromCloudinary() {
-            try {
-                const allImages = [];
-                
-                for (const category of CATEGORIES) {
-                    // Cloudinary의 리소스 목록 API 호출
-                    const response = await fetch(
-                        `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/list/${category}.json`
-                    );
+        // 이미지 목록 생성 (파일명 기반)
+        function generateImageList() {
+            const allImages = [];
+            
+            // 각 카테고리별로 이미지 추가
+            for (const category of CATEGORIES) {
+                // 각 카테고리당 50장씩 (1부터 50까지)
+                for (let i = 1; i <= 50; i++) {
+                    const imageNumber = i.toString().padStart(3, '0'); // 001, 002, 003 형식
                     
-                    if (response.ok) {
-                        const data = await response.json();
-                        const categoryImages = data.resources.map(resource => ({
-                            public_id: resource.public_id,
+                    // 다양한 파일 확장자 시도
+                    const extensions = ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG'];
+                    
+                    for (const ext of extensions) {
+                        allImages.push({
+                            public_id: `${category}/${category}_${imageNumber}`,
                             category: category,
-                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${resource.public_id}`
-                        }));
-                        allImages.push(...categoryImages);
-                    } else {
-                        console.warn(`Failed to fetch images for category: ${category}`);
-                        // 카테고리별로 임의의 이미지 생성 (테스트용)
-                        for (let i = 1; i <= 50; i++) {
-                            allImages.push({
-                                public_id: `${category}/${category}_${i}`,
-                                category: category,
-                                url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${category}_${i}.jpg`
-                            });
-                        }
-                    }
-                }
-                
-                return allImages;
-            } catch (error) {
-                console.error('Error fetching images:', error);
-                // 에러 발생 시 테스트 데이터 반환
-                const testImages = [];
-                for (const category of CATEGORIES) {
-                    for (let i = 1; i <= 50; i++) {
-                        testImages.push({
-                            public_id: `${category}/${category}_${i}`,
-                            category: category,
-                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${category}_${i}.jpg`
+                            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${category}/${category}_${imageNumber}.${ext}`,
+                            fallback_url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${category}_${i}.${ext}`
                         });
                     }
+                    
+                    // 숫자만 있는 경우도 추가
+                    allImages.push({
+                        public_id: `${category}/${i}`,
+                        category: category,
+                        url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${category}/${i}.jpg`,
+                        fallback_url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${category}/${i}.jpg`
+                    });
                 }
-                return testImages;
             }
+            
+            return allImages;
         }
 
         // 게임 초기화
         async function initializeGame() {
             showLoading();
-            try {
-                gameState.imagePool = await fetchImagesFromCloudinary();
-                console.log(`Loaded ${gameState.imagePool.length} images`);
-                loadNextImage();
-            } catch (error) {
-                console.error('Failed to initialize game:', error);
-                document.getElementById('loadingDiv').textContent = '이미지 로딩 실패. 페이지를 새로고침해주세요.';
+            gameState.imagePool = await generateImageList();
+            console.log(`실제 발견된 이미지: ${gameState.imagePool.length}개`);
+            
+            if (gameState.imagePool.length === 0) {
+                document.getElementById('loadingDiv').textContent = '이미지를 찾을 수 없습니다. Cloudinary 설정을 확인하세요.';
+                return;
             }
+            
+            loadNextImage();
         }
 
         // 로딩 표시
@@ -391,19 +377,34 @@
 
             // 이미지 로드
             const img = document.getElementById('pathologyImage');
-            img.onload = function() {
-                document.getElementById('loadingDiv').style.display = 'none';
-                img.style.display = 'block';
-                document.getElementById('categoryLabel').textContent = randomImage.category;
-                document.getElementById('categoryLabel').style.display = 'block';
-            };
+            let attemptedUrls = [];
             
-            img.onerror = function() {
-                console.warn('Failed to load image:', randomImage.url);
-                loadNextImage(); // 다른 이미지 시도
-            };
+            function tryLoadImage(imageInfo) {
+                img.onload = function() {
+                    document.getElementById('loadingDiv').style.display = 'none';
+                    img.style.display = 'block';
+                    document.getElementById('categoryLabel').textContent = imageInfo.category;
+                    document.getElementById('categoryLabel').style.display = 'block';
+                };
+                
+                img.onerror = function() {
+                    attemptedUrls.push(img.src);
+                    console.warn('Failed to load image:', img.src);
+                    
+                    // fallback URL 시도
+                    if (imageInfo.fallback_url && !attemptedUrls.includes(imageInfo.fallback_url)) {
+                        img.src = imageInfo.fallback_url;
+                        return;
+                    }
+                    
+                    // 다른 이미지 시도
+                    loadNextImage();
+                };
+                
+                img.src = imageInfo.url;
+            }
             
-            img.src = randomImage.url;
+            tryLoadImage(randomImage);
         }
 
         // 답변 처리
