@@ -367,60 +367,44 @@
             return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${imageName}.jpg`;
         }
         
-        // 이미지 존재 여부 확인 함수
-        async function checkImageExists(url) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
-                img.src = url;
-            });
-        }
-
-        // 자동으로 이미지 목록 생성 (패턴 기반으로 존재하는 이미지 찾기)
-        async function autoDiscoverImages(folderName) {
-            const images = [];
-            const maxImages = 20; // 한 번에 체크할 최대 이미지 수
-            let foundCount = 0;
-            
-            // 일반적인 suffix 패턴들
-            const commonSuffixes = [
-                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-                'wiaute', 'vck5wg', 'u6htti', 'kq4iy8', 'lxlxaf', 'xpils9', 'btqi9d', 'i6rfwf', 'unbktw', 'db80cr',
-                'khqouy', 'grezaz', 'rgl0to', 'y5hkcs', 'zf3u6k', 'czd3pw', 'lvfjtd', 'cd12xq', 'mfakk4', 'sizcjt',
-                'b4wrpa', 'p0zhzz', 'wsfwf2', 'iirlza', 'j6djon', 'psnyst', 'test', 'img', 'pic', 'sample'
-            ];
-            
-            console.log(`🔍 ${folderName} 폴더에서 이미지 검색 중...`);
-            
-            // 1_1부터 1_99까지, 2_1부터 2_99까지 체크
-            for (let prefix = 1; prefix <= 3 && foundCount < maxImages; prefix++) {
-                for (let num = 1; num <= 99 && foundCount < maxImages; num++) {
-                    // 몇 개의 일반적인 suffix만 빠르게 체크
-                    const testSuffixes = commonSuffixes.slice(0, 5);
-                    
-                    for (let suffix of testSuffixes) {
-                        const imageName = `${folderName}_${prefix}_${num}_${suffix}`;
-                        const imageUrl = getImageUrl(imageName);
-                        
-                        // 비동기로 이미지 존재 확인
-                        const exists = await checkImageExists(imageUrl);
-                        if (exists) {
-                            images.push({
-                                name: imageName,
-                                url: imageUrl,
-                                folder: folderName
-                            });
-                            foundCount++;
-                            console.log(`✅ 발견: ${imageName}`);
-                            break; // 해당 번호에서 이미지를 찾으면 다음 번호로
-                        }
-                    }
+        // GitHub에서 이미지 목록 가져오기
+        async function fetchImageListFromGitHub() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/hne-ihc/memory_pathology/main/images.json');
+                if (response.ok) {
+                    const imageData = await response.json();
+                    console.log('✅ GitHub에서 이미지 목록 로드 성공');
+                    return imageData;
                 }
+            } catch (error) {
+                console.log('⚠️ GitHub에서 이미지 목록 로드 실패, 로컬 데이터 사용:', error);
             }
             
-            console.log(`📊 ${folderName}: ${images.length}개 이미지 발견`);
-            return images;
+            // 백업용 로컬 데이터 (GitHub 파일이 없을 때)
+            return {
+                'Breast': [
+                    'Breast_1_91_wiaute', 'Breast_2_41_vck5wg', 'Breast_2_16_u6htti', 
+                    'Breast_2_40_kq4iy8', 'Breast_2_20_lxlxaf', 'Breast_2_9_xpils9',
+                    'Breast_2_17_btqi9d', 'Breast_2_5_i6rfwf', 'Breast_2_12_unbktw',
+                    'Breast_2_31_db80cr'
+                ],
+                'GU_UCC': [
+                    'GU_UCC_1_5_khqouy', 'GU_UCC_1_2_grezaz', 'GU_UCC_1_1_rgl0to',
+                    'GU_UCC_1_3_y5hkcs', 'GU_UCC_1_4_zf3u6k'
+                ],
+                'GU_prostate': [
+                    'GU_prostate_1_8_czd3pw', 'GU_prostate_1_6_lvfjtd', 'GU_prostate_1_3_cd12xq',
+                    'GU_prostate_1_7_mfakk4', 'GU_prostate_1_2_sizcjt', 'GU_prostate_1_5_b4wrpa'
+                ],
+                'Endo': [
+                    'Endo_1_2_p0zhzz', 'Endo_1_1_wsfwf2'
+                ],
+                'BO_SO': [
+                    'BO_SO_1_3_iirlza', 'BO_SO_1_2_j6djon', 'BO_SO_1_1_psnyst'
+                ],
+                'GI': [],
+                'GU_RCC': []
+            };
         }
 
         // 이미지 존재 확인 및 랜덤 이미지 생성
@@ -442,24 +426,35 @@
 
         // 특정 폴더에서 이미지 수집
         async function getImagesFromFolder(folderName) {
-            // 캐시에서 먼저 확인
+            // 캐시 확인
             const cacheKey = `images_${folderName}`;
             const cached = localStorage.getItem(cacheKey);
             const cacheTime = localStorage.getItem(`${cacheKey}_time`);
             
-            // 캐시가 있고 1시간 이내라면 캐시 사용
-            if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 3600000) {
+            // 캐시가 있고 30분 이내라면 캐시 사용
+            if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 1800000) {
                 console.log(`📱 ${folderName} 캐시에서 로드`);
                 return JSON.parse(cached);
             }
             
-            // 자동 탐지로 이미지 목록 생성
-            const images = await autoDiscoverImages(folderName);
+            // GitHub에서 최신 이미지 목록 가져오기
+            const imageDatabase = await fetchImageListFromGitHub();
+            const folderImages = imageDatabase[folderName] || [];
             
-            // 캐시에 저장
+            let images = [];
+            for (let imageName of folderImages) {
+                images.push({
+                    name: imageName,
+                    url: getImageUrl(imageName),
+                    folder: folderName
+                });
+            }
+            
+            // 캐시에 저장 (30분)
             localStorage.setItem(cacheKey, JSON.stringify(images));
             localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
             
+            console.log(`📊 ${folderName}: ${images.length}개 이미지 로드됨`);
             return images;
         }
 
@@ -519,10 +514,6 @@
         async function startMode(folder) {
             selectedFolder = folder;
             
-            // 로딩 표시
-            document.getElementById('quizTitle').textContent = '이미지 로딩 중...';
-            showScreen('quizScreen');
-            
             if (currentMode === 'quiz') {
                 currentImageList = await generateImageList(folder);
                 document.getElementById('quizTitle').textContent = 
@@ -547,6 +538,7 @@
             currentImageIndex = 0;
             imageHistory = [0];
             showCurrentImage();
+            showScreen('quizScreen');
         }
 
         // 현재 이미지 표시
