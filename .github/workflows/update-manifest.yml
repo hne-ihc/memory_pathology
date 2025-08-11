@@ -1,0 +1,106 @@
+name: Update Image Manifest
+
+on:
+  schedule:
+    # 매일 오전 9시에 자동 실행 (한국 시간 기준 오후 6시)
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    # 수동 실행 가능
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install cloudinary
+      
+    - name: Generate manifest
+      run: |
+        cat > generate-manifest.js << 'EOF'
+        const cloudinary = require('cloudinary').v2;
+        const fs = require('fs');
+
+        // Cloudinary 설정
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET
+        });
+
+        const folders = ['BO_SO', 'Breast', 'Endo', 'GI', 'GU_prostate', 'GU_RCC', 'GU_UCC'];
+
+        async function getImagesFromFolder(folder) {
+          try {
+            console.log(`🔍 ${folder} 폴더에서 이미지 검색 중...`);
+            
+            const result = await cloudinary.api.resources({
+              type: 'upload',
+              prefix: folder,
+              max_results: 500,
+              resource_type: 'image'
+            });
+            
+            const images = result.resources.map(resource => {
+              // public_id에서 확장자 제거 (파일명만)
+              return resource.public_id;
+            });
+            
+            console.log(`✅ ${folder}: ${images.length}개 이미지 발견`);
+            return images;
+            
+          } catch (error) {
+            console.error(`❌ ${folder} 폴더 오류:`, error.message);
+            return [];
+          }
+        }
+
+        async function generateManifest() {
+          const manifest = {};
+          
+          for (const folder of folders) {
+            manifest[folder] = await getImagesFromFolder(folder);
+          }
+          
+          // manifest.json 파일 생성
+          fs.writeFileSync('manifest.json', JSON.stringify(manifest, null, 2));
+          console.log('📝 manifest.json 파일 생성 완료');
+          console.log('총 이미지 수:', Object.values(manifest).flat().length);
+        }
+
+        generateManifest().catch(console.error);
+        EOF
+        
+        node generate-manifest.js
+      env:
+        CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+        CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+        CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if [ -f manifest.json ]; then
+          git add manifest.json
+          
+          if git diff --staged --quiet; then
+            echo "변경사항 없음"
+          else
+            git commit -m "📱 이미지 목록 자동 업데이트 $(date '+%Y-%m-%d %H:%M')"
+            git push
+            echo "✅ manifest.json 업데이트 완료"
+          fi
+        else
+          echo "❌ manifest.json 파일 생성 실패"
+          exit 1
+        fi
