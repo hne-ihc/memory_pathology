@@ -10,6 +10,8 @@ on:
 jobs:
   update-manifest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
@@ -97,7 +99,7 @@ jobs:
             echo "변경사항 없음"
           else
             git commit -m "📱 이미지 목록 자동 업데이트 $(date '+%Y-%m-%d %H:%M')"
-            git push
+            git push origin main
             echo "✅ manifest.json 업데이트 완료"
           fi
         else
