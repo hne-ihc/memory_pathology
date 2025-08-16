@@ -341,15 +341,15 @@
                         </div>
                         <div class="stat-item">
                             <div class="stat-number" id="oCount">0</div>
-                            <div class="stat-label">😁 Marked</div>
+                            <div class="stat-label">😁</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-number" id="xCount">0</div>
-                            <div class="stat-label">🤔 Marked</div>
+                            <div class="stat-label">🤔</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-number" id="noneCount">0</div>
-                            <div class="stat-label">😈 Unmarked</div>
+                            <div class="stat-label">😈</div>
                         </div>
                     </div>
                 </div>
@@ -744,8 +744,7 @@
         }
 
         // 통계 업데이트
-        function updateStats() {
-            let totalImages = Object.keys(imageStats).length;
+        async function updateStats() {
             let oCount = 0;
             let xCount = 0;
             
@@ -754,48 +753,25 @@
                 if (answers[imageName] === 'X') xCount++;
             }
             
-            // 전체 이미지 수 계산 (하드코딩된 데이터베이스에서)
-            const allImageDatabase = {
-                'Breast': [
-                    'Breast_1_91_wiaute', 'Breast_2_41_vck5wg', 'Breast_2_16_u6htti', 
-                    'Breast_2_40_kq4iy8', 'Breast_2_20_lxlxaf', 'Breast_2_9_xpils9',
-                    'Breast_2_17_btqi9d', 'Breast_2_5_i6rfwf', 'Breast_2_12_unbktw',
-                    'Breast_2_31_db80cr'
-                ],
-                'GU_UCC': [
-                    'GU_UCC_1_5_khqouy', 'GU_UCC_1_2_grezaz', 'GU_UCC_1_1_rgl0to',
-                    'GU_UCC_1_3_y5hkcs', 'GU_UCC_1_4_zf3u6k'
-                ],
-                'GU_prostate': [
-                    'GU_prostate_1_8_czd3pw', 'GU_prostate_1_6_lvfjtd', 'GU_prostate_1_3_cd12xq',
-                    'GU_prostate_1_7_mfakk4', 'GU_prostate_1_2_sizcjt', 'GU_prostate_1_5_b4wrpa'
-                ],
-                'Endo': [
-                    'Endo_1_2_p0zhzz', 'Endo_1_1_wsfwf2'
-                ],
-                'BO_SO': [
-                    'BO_SO_1_3_iirlza', 'BO_SO_1_2_j6djon', 'BO_SO_1_1_psnyst'
-                ],
-                'GI': [],
-                'GU_RCC': []
-            };
-            
-            let allImagesCount = 0;
-            for (let folder in allImageDatabase) {
-                allImagesCount += allImageDatabase[folder].length;
+            // 전체 등록된 이미지 수 계산 (GitHub 또는 로컬 데이터에서)
+            const imageDatabase = await fetchImageListFromGitHub();
+            let totalImagesCount = 0;
+            for (let folder in imageDatabase) {
+                totalImagesCount += imageDatabase[folder].length;
             }
             
-            let noneCount = allImagesCount - oCount - xCount;
+            // 답변하지 않은 이미지 수 = 전체 - 😁 - 🤔
+            let noneCount = totalImagesCount - oCount - xCount;
             
-            document.getElementById('totalImages').textContent = allImagesCount;
+            document.getElementById('totalImages').textContent = totalImagesCount;
             document.getElementById('oCount').textContent = oCount;
             document.getElementById('xCount').textContent = xCount;
             document.getElementById('noneCount').textContent = noneCount;
         }
 
         // 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            updateStats();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await updateStats();
         });
     </script>
 </body>
