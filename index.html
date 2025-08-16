@@ -161,7 +161,7 @@
         
         .quiz-image {
             width: 100%;
-            flex: 1;
+            aspect-ratio: 3/4;
             object-fit: contain;
             background: #f0f0f0;
         }
@@ -324,8 +324,9 @@
             </div>
             <div class="main-menu">
                 <button class="menu-button quiz-button" onclick="showFolderSelection('quiz')">QUIZ</button>
-                <button class="menu-button o-button" onclick="showFolderSelection('o')">O Collection</button>
-                <button class="menu-button x-button" onclick="showFolderSelection('x')">X Collection</button>
+                <button class="menu-button o-button" onclick="showFolderSelection('o')">😁 Collection</button>
+                <button class="menu-button x-button" onclick="showFolderSelection('x')">🤔 Collection</button>
+                <button class="menu-button" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white;" onclick="showFolderSelection('none')">😈 Collection</button>
                 <div class="stats">
                     <div class="stats-grid">
                         <div class="stat-item">
@@ -334,11 +335,15 @@
                         </div>
                         <div class="stat-item">
                             <div class="stat-number" id="oCount">0</div>
-                            <div class="stat-label">O Marked</div>
+                            <div class="stat-label">😁 Marked</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-number" id="xCount">0</div>
-                            <div class="stat-label">X Marked</div>
+                            <div class="stat-label">🤔 Marked</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="noneCount">0</div>
+                            <div class="stat-label">😈 Unmarked</div>
                         </div>
                     </div>
                 </div>
@@ -380,8 +385,8 @@
                     </div>
                 </div>
                 <div id="answerButtons" class="answer-buttons">
-                    <button class="answer-btn o" onclick="markAnswer('O')">O</button>
-                    <button class="answer-btn x" onclick="markAnswer('X')">X</button>
+                    <button class="answer-btn o" onclick="markAnswer('O')">😁</button>
+                    <button class="answer-btn x" onclick="markAnswer('X')">🤔</button>
                 </div>
                 <div class="control-buttons">
                     <button class="control-btn" onclick="previousImage()">이전</button>
@@ -509,27 +514,73 @@
             return shuffled;
         }
 
-        // 필터된 이미지 리스트 생성 (O 또는 X 마크된 것들)
+        // 필터된 이미지 리스트 생성 (😁, 🤔, 😈 마크된 것들)
         function getFilteredImages(answerType) {
             let filtered = [];
-            for (let imageName in answers) {
-                if (answers[imageName] === answerType) {
-                    // 폴더명 추출
-                    let folder = '';
-                    for (let folderName of FOLDERS) {
-                        if (imageName.startsWith(folderName)) {
-                            folder = folderName;
-                            break;
+            
+            if (answerType === 'none') {
+                // 😈 (아직 답변하지 않은 이미지들)
+                const allImages = [];
+                // 모든 이미지 목록을 가져와서 답변하지 않은 것들 찾기
+                for (let folderName of FOLDERS) {
+                    const imageDatabase = {
+                        'Breast': [
+                            'Breast_1_91_wiaute', 'Breast_2_41_vck5wg', 'Breast_2_16_u6htti', 
+                            'Breast_2_40_kq4iy8', 'Breast_2_20_lxlxaf', 'Breast_2_9_xpils9',
+                            'Breast_2_17_btqi9d', 'Breast_2_5_i6rfwf', 'Breast_2_12_unbktw',
+                            'Breast_2_31_db80cr'
+                        ],
+                        'GU_UCC': [
+                            'GU_UCC_1_5_khqouy', 'GU_UCC_1_2_grezaz', 'GU_UCC_1_1_rgl0to',
+                            'GU_UCC_1_3_y5hkcs', 'GU_UCC_1_4_zf3u6k'
+                        ],
+                        'GU_prostate': [
+                            'GU_prostate_1_8_czd3pw', 'GU_prostate_1_6_lvfjtd', 'GU_prostate_1_3_cd12xq',
+                            'GU_prostate_1_7_mfakk4', 'GU_prostate_1_2_sizcjt', 'GU_prostate_1_5_b4wrpa'
+                        ],
+                        'Endo': [
+                            'Endo_1_2_p0zhzz', 'Endo_1_1_wsfwf2'
+                        ],
+                        'BO_SO': [
+                            'BO_SO_1_3_iirlza', 'BO_SO_1_2_j6djon', 'BO_SO_1_1_psnyst'
+                        ],
+                        'GI': [],
+                        'GU_RCC': []
+                    };
+                    
+                    const folderImages = imageDatabase[folderName] || [];
+                    for (let imageName of folderImages) {
+                        if (!answers[imageName]) {
+                            filtered.push({
+                                name: imageName,
+                                url: getImageUrl(imageName),
+                                folder: folderName
+                            });
                         }
                     }
-                    
-                    filtered.push({
-                        name: imageName,
-                        url: getImageUrl(imageName),
-                        folder: folder
-                    });
+                }
+            } else {
+                // 😁 또는 🤔 마크된 이미지들
+                for (let imageName in answers) {
+                    if (answers[imageName] === answerType) {
+                        // 폴더명 추출
+                        let folder = '';
+                        for (let folderName of FOLDERS) {
+                            if (imageName.startsWith(folderName)) {
+                                folder = folderName;
+                                break;
+                            }
+                        }
+                        
+                        filtered.push({
+                            name: imageName,
+                            url: getImageUrl(imageName),
+                            folder: folder
+                        });
+                    }
                 }
             }
+            
             return shuffleArray(filtered);
         }
 
@@ -562,11 +613,15 @@
                 document.getElementById('answerButtons').style.display = 'flex';
             } else if (currentMode === 'o') {
                 currentImageList = getFilteredImages('O');
-                document.getElementById('quizTitle').textContent = 'O Collection';
+                document.getElementById('quizTitle').textContent = '😁 Collection';
                 document.getElementById('answerButtons').style.display = 'flex';
             } else if (currentMode === 'x') {
                 currentImageList = getFilteredImages('X');
-                document.getElementById('quizTitle').textContent = 'X Collection';
+                document.getElementById('quizTitle').textContent = '🤔 Collection';
+                document.getElementById('answerButtons').style.display = 'flex';
+            } else if (currentMode === 'none') {
+                currentImageList = getFilteredImages('none');
+                document.getElementById('quizTitle').textContent = '😈 Collection';
                 document.getElementById('answerButtons').style.display = 'flex';
             }
             
@@ -597,7 +652,8 @@
             // 이전 답변 표시
             const prevAnswer = answers[currentImage.name];
             if (prevAnswer && currentMode === 'quiz') {
-                previousAnswer.textContent = `Previous: ${prevAnswer}`;
+                const emoji = prevAnswer === 'O' ? '😁' : '🤔';
+                previousAnswer.textContent = `Previous: ${emoji}`;
                 previousAnswer.classList.remove('hidden');
             } else {
                 previousAnswer.classList.add('hidden');
@@ -692,9 +748,43 @@
                 if (answers[imageName] === 'X') xCount++;
             }
             
-            document.getElementById('totalImages').textContent = totalImages;
+            // 전체 이미지 수 계산 (하드코딩된 데이터베이스에서)
+            const allImageDatabase = {
+                'Breast': [
+                    'Breast_1_91_wiaute', 'Breast_2_41_vck5wg', 'Breast_2_16_u6htti', 
+                    'Breast_2_40_kq4iy8', 'Breast_2_20_lxlxaf', 'Breast_2_9_xpils9',
+                    'Breast_2_17_btqi9d', 'Breast_2_5_i6rfwf', 'Breast_2_12_unbktw',
+                    'Breast_2_31_db80cr'
+                ],
+                'GU_UCC': [
+                    'GU_UCC_1_5_khqouy', 'GU_UCC_1_2_grezaz', 'GU_UCC_1_1_rgl0to',
+                    'GU_UCC_1_3_y5hkcs', 'GU_UCC_1_4_zf3u6k'
+                ],
+                'GU_prostate': [
+                    'GU_prostate_1_8_czd3pw', 'GU_prostate_1_6_lvfjtd', 'GU_prostate_1_3_cd12xq',
+                    'GU_prostate_1_7_mfakk4', 'GU_prostate_1_2_sizcjt', 'GU_prostate_1_5_b4wrpa'
+                ],
+                'Endo': [
+                    'Endo_1_2_p0zhzz', 'Endo_1_1_wsfwf2'
+                ],
+                'BO_SO': [
+                    'BO_SO_1_3_iirlza', 'BO_SO_1_2_j6djon', 'BO_SO_1_1_psnyst'
+                ],
+                'GI': [],
+                'GU_RCC': []
+            };
+            
+            let allImagesCount = 0;
+            for (let folder in allImageDatabase) {
+                allImagesCount += allImageDatabase[folder].length;
+            }
+            
+            let noneCount = allImagesCount - oCount - xCount;
+            
+            document.getElementById('totalImages').textContent = allImagesCount;
             document.getElementById('oCount').textContent = oCount;
             document.getElementById('xCount').textContent = xCount;
+            document.getElementById('noneCount').textContent = noneCount;
         }
 
         // 초기화
