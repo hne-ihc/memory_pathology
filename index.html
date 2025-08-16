@@ -156,11 +156,17 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
             overflow: hidden;
         }
         
         .quiz-image {
-            width: 100%;
+            max-width: 100%;
+            max-height: calc(100vh - 200px);
+            width: auto;
+            height: auto;
             aspect-ratio: 3/4;
             object-fit: contain;
             background: #f0f0f0;
@@ -324,9 +330,9 @@
             </div>
             <div class="main-menu">
                 <button class="menu-button quiz-button" onclick="showFolderSelection('quiz')">QUIZ</button>
-                <button class="menu-button o-button" onclick="showFolderSelection('o')">😁 Collection</button>
-                <button class="menu-button x-button" onclick="showFolderSelection('x')">🤔 Collection</button>
-                <button class="menu-button" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white;" onclick="showFolderSelection('none')">😈 Collection</button>
+                <button class="menu-button o-button" onclick="showFolderSelection('o')">😁</button>
+                <button class="menu-button x-button" onclick="showFolderSelection('x')">🤔</button>
+                <button class="menu-button" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white;" onclick="showFolderSelection('none')">😈</button>
                 <div class="stats">
                     <div class="stats-grid">
                         <div class="stat-item">
@@ -613,15 +619,15 @@
                 document.getElementById('answerButtons').style.display = 'flex';
             } else if (currentMode === 'o') {
                 currentImageList = getFilteredImages('O');
-                document.getElementById('quizTitle').textContent = '😁 Collection';
+                document.getElementById('quizTitle').textContent = '😁';
                 document.getElementById('answerButtons').style.display = 'flex';
             } else if (currentMode === 'x') {
                 currentImageList = getFilteredImages('X');
-                document.getElementById('quizTitle').textContent = '🤔 Collection';
+                document.getElementById('quizTitle').textContent = '🤔';
                 document.getElementById('answerButtons').style.display = 'flex';
             } else if (currentMode === 'none') {
                 currentImageList = getFilteredImages('none');
-                document.getElementById('quizTitle').textContent = '😈 Collection';
+                document.getElementById('quizTitle').textContent = '😈';
                 document.getElementById('answerButtons').style.display = 'flex';
             }
             
