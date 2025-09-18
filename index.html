@@ -641,4 +641,142 @@
                 return;
             }
             
-            currentImageIndex
+            currentImageIndex = 0;
+            imageHistory = [0];
+            showCurrentImage();
+            showScreen('quizScreen');
+        }
+
+        // 현재 이미지 표시
+        function showCurrentImage() {
+            if (currentImageList.length === 0) return;
+            
+            const currentImage = currentImageList[currentImageIndex];
+            const img = document.getElementById('quizImage');
+            const nameEl = document.getElementById('imageName');
+            const previousAnswer = document.getElementById('previousAnswer');
+            
+            img.src = currentImage.url;
+            nameEl.textContent = currentImage.name;
+            
+            // 이전 답변 표시
+            const prevAnswer = answers[currentImage.name];
+            if (prevAnswer && currentMode === 'quiz') {
+                const emoji = prevAnswer === 'O' ? '😁' : '🤔';
+                previousAnswer.textContent = `Previous: ${emoji}`;
+                previousAnswer.classList.remove('hidden');
+            } else {
+                previousAnswer.classList.add('hidden');
+            }
+            
+            // 이미지 로드 에러 처리
+            img.onerror = function() {
+                console.log('Image failed to load:', currentImage.url);
+                // 실제 이미지가 없으면 다음 이미지로 이동
+                nextImage();
+            };
+        }
+
+        // 답변 마킹
+        function markAnswer(answer) {
+            if (currentImageList.length === 0) return;
+            
+            const currentImage = currentImageList[currentImageIndex];
+            answers[currentImage.name] = answer;
+            
+            // 통계 업데이트
+            if (!imageStats[currentImage.name]) {
+                imageStats[currentImage.name] = 0;
+            }
+            imageStats[currentImage.name]++;
+            
+            // 로컬 스토리지 저장
+            localStorage.setItem('pathologyAnswers', JSON.stringify(answers));
+            localStorage.setItem('imageStats', JSON.stringify(imageStats));
+            
+            // 다음 이미지로 이동
+            setTimeout(() => {
+                nextImage();
+            }, 300);
+        }
+
+        // 다음 이미지
+        function nextImage() {
+            if (currentImageList.length === 0) return;
+            
+            // 균등한 빈도로 이미지 선택
+            currentImageIndex = selectNextImageIndex();
+            imageHistory.push(currentImageIndex);
+            
+            // 히스토리 크기 제한
+            if (imageHistory.length > 50) {
+                imageHistory = imageHistory.slice(-50);
+            }
+            
+            showCurrentImage();
+        }
+
+        // 이전 이미지
+        function previousImage() {
+            if (imageHistory.length > 1) {
+                imageHistory.pop(); // 현재 인덱스 제거
+                currentImageIndex = imageHistory[imageHistory.length - 1];
+                showCurrentImage();
+            }
+        }
+
+        // 균등한 빈도로 다음 이미지 선택
+        function selectNextImageIndex() {
+            // 통계 기반으로 가장 적게 본 이미지들 중에서 선택
+            let minViews = Infinity;
+            let candidateIndices = [];
+            
+            for (let i = 0; i < currentImageList.length; i++) {
+                const imageName = currentImageList[i].name;
+                const views = imageStats[imageName] || 0;
+                
+                if (views < minViews) {
+                    minViews = views;
+                    candidateIndices = [i];
+                } else if (views === minViews) {
+                    candidateIndices.push(i);
+                }
+            }
+            
+            // 후보 중에서 랜덤 선택
+            return candidateIndices[Math.floor(Math.random() * candidateIndices.length)];
+        }
+
+        // 통계 업데이트
+        async function updateStats() {
+            let oCount = 0;
+            let xCount = 0;
+            
+            for (let imageName in answers) {
+                if (answers[imageName] === 'O') oCount++;
+                if (answers[imageName] === 'X') xCount++;
+            }
+            
+            // 전체 등록된 이미지 수 계산 (GitHub 또는 로컬 데이터에서)
+            const imageDatabase = await fetchImageListFromGitHub();
+            let totalImagesCount = 0;
+            for (let folder in imageDatabase) {
+                totalImagesCount += imageDatabase[folder].length;
+            }
+            
+            // 답변하지 않은 이미지 수 = 전체 - 😁 - 🤔
+            let noneCount = totalImagesCount - oCount - xCount;
+            
+            document.getElementById('totalImages').textContent = totalImagesCount;
+            document.getElementById('oCount').textContent = oCount;
+            document.getElementById('xCount').textContent = xCount;
+            document.getElementById('noneCount').textContent = noneCount;
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', async function() {
+            await updateStats();
+        });
+    </script>
+</body>
+</html>
