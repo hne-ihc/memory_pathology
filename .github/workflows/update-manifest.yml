@@ -1,5 +1,4 @@
 name: Update Image Manifest
-
 on:
   schedule:
     # 매일 오전 9시에 자동 실행 (한국 시간 기준 오후 6시)
@@ -38,7 +37,8 @@ jobs:
           api_secret: process.env.CLOUDINARY_API_SECRET
         });
 
-        const folders = ['BO_SO', 'Breast', 'Endo', 'GI', 'GU_prostate', 'GU_RCC', 'GU_UCC'];
+        // GY 카테고리 추가됨
+        const folders = ['BO_SO', 'Breast', 'Endo', 'GI', 'GU_prostate', 'GU_RCC', 'GU_UCC', 'GY'];
 
         async function getImagesFromFolder(folder) {
           try {
