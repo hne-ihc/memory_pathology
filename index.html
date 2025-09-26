@@ -406,7 +406,7 @@
 
     <script>
         const CLOUDINARY_CLOUD_NAME = 'db5wqzdth';
-        // 카테고리 추가하기
+        // GY, RoGY 카테고리 추가됨
         const FOLDERS = ['BO_SO', 'Breast', 'Endo', 'GI', 'GU_prostate', 'GU_RCC', 'GU_UCC', 'GY', 'RoGY'];
         
         let currentMode = '';
@@ -435,7 +435,7 @@
                 console.log('⚠️ GitHub에서 이미지 목록 로드 실패, 로컬 데이터 사용:', error);
             }
             
-            // 백업용 로컬 데이터 (GitHub 파일이 없을 때) - GY 추가됨
+            // 백업용 로컬 데이터 (GitHub 파일이 없을 때) - GY, RoGY 추가됨
             return {
                 'Breast': [
                     'Breast_1_91_wiaute', 'Breast_2_41_vck5wg', 'Breast_2_16_u6htti', 
@@ -459,8 +459,8 @@
                 ],
                 'GI': [],
                 'GU_RCC': [],
-                'GY': []
-                'RoGY': [] // 새로 추가된 GY 카테고리
+                'GY': [], // GY 카테고리
+                'RoGY': [] // 새로 추가된 RoGY 카테고리
             };
         }
 
@@ -557,8 +557,8 @@
                         ],
                         'GI': [],
                         'GU_RCC': [],
-                        'GY': []
-                        'RoGY': []// 새로 추가된 GY 카테고리
+                        'GY': [], // GY 카테고리
+                        'RoGY': [] // 새로 추가된 RoGY 카테고리
                     };
                     
                     const folderImages = imageDatabase[folderName] || [];
