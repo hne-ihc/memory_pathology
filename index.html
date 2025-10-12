@@ -374,6 +374,19 @@
                     <button class="folder-btn" onclick="startMode('GU_UCC')">GU_UCC</button>
                     <button class="folder-btn" onclick="startMode('GY')">GY</button>
                     <button class="folder-btn" onclick="startMode('RoGY')">RoGY</button>
+                    <button class="folder-btn" onclick="startMode('Frozen')">Frozen</button>
+                    <button class="folder-btn" onclick="startMode('Cyto')">Cyto</button>
+                    <button class="folder-btn" onclick="startMode('Thorax')">Thorax</button>
+                    <button class="folder-btn" onclick="startMode('Pla')">Pla</button>
+                    <button class="folder-btn" onclick="startMode('Ped')">Ped</button>
+                    <button class="folder-btn" onclick="startMode('Heart')">Heart</button>
+                    <button class="folder-btn" onclick="startMode('GU_med')">GU_med</button>
+                    <button class="folder-btn" onclick="startMode('PB')">PB</button>
+                    <button class="folder-btn" onclick="startMode('Liver')">Liver</button>
+                    <button class="folder-btn" onclick="startMode('Lympho')">Lympho</button>
+                    <button class="folder-btn" onclick="startMode('HnN')">HnN</button>
+                    <button class="folder-btn" onclick="startMode('Skin')">Skin</button>
+                    <button class="folder-btn" onclick="startMode('Neuro')">Neuro</button>
                 </div>
             </div>
         </div>
@@ -406,8 +419,8 @@
 
     <script>
         const CLOUDINARY_CLOUD_NAME = 'db5wqzdth';
-        // GY, RoGY 카테고리 추가됨
-        const FOLDERS = ['BO_SO', 'Breast', 'Endo', 'GI', 'GU_prostate', 'GU_RCC', 'GU_UCC', 'GY', 'RoGY'];
+        // 모든 카테고리 추가됨
+        const FOLDERS = ['BO_SO', 'Breast', 'Endo', 'GI', 'GU_prostate', 'GU_RCC', 'GU_UCC', 'GY', 'RoGY', 'Frozen', 'Cyto', 'Thorax', 'Pla', 'Ped', 'Heart', 'GU_med', 'PB', 'Liver', 'Lympho', 'HnN', 'Skin', 'Neuro'];
         
         let currentMode = '';
         let selectedFolder = '';
@@ -435,7 +448,7 @@
                 console.log('⚠️ GitHub에서 이미지 목록 로드 실패, 로컬 데이터 사용:', error);
             }
             
-            // 백업용 로컬 데이터 (GitHub 파일이 없을 때) - GY, RoGY 추가됨
+            // 백업용 로컬 데이터 (GitHub 파일이 없을 때) - 모든 카테고리 추가됨
             return {
                 'Breast': [
                     'Breast_1_91_wiaute', 'Breast_2_41_vck5wg', 'Breast_2_16_u6htti', 
@@ -459,8 +472,21 @@
                 ],
                 'GI': [],
                 'GU_RCC': [],
-                'GY': [], // GY 카테고리
-                'RoGY': [] // 새로 추가된 RoGY 카테고리
+                'GY': [],
+                'RoGY': [],
+                'Frozen': [],
+                'Cyto': [],
+                'Thorax': [],
+                'Pla': [],
+                'Ped': [],
+                'Heart': [],
+                'GU_med': [],
+                'PB': [],
+                'Liver': [],
+                'Lympho': [],
+                'HnN': [],
+                'Skin': [],
+                'Neuro': []
             };
         }
 
@@ -557,8 +583,21 @@
                         ],
                         'GI': [],
                         'GU_RCC': [],
-                        'GY': [], // GY 카테고리
-                        'RoGY': [] // 새로 추가된 RoGY 카테고리
+                        'GY': [],
+                        'RoGY': [],
+                        'Frozen': [],
+                        'Cyto': [],
+                        'Thorax': [],
+                        'Pla': [],
+                        'Ped': [],
+                        'Heart': [],
+                        'GU_med': [],
+                        'PB': [],
+                        'Liver': [],
+                        'Lympho': [],
+                        'HnN': [],
+                        'Skin': [],
+                        'Neuro': []
                     };
                     
                     const folderImages = imageDatabase[folderName] || [];
